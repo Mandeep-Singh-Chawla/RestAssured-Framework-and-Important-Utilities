@@ -1,5 +1,5 @@
 # RestAssured-and-Imp-Utilities
-RestAssured Framework for API Automation using TestNG and Java ,also added below Utilities which are very useful for QA Automation in Java
+RestAssured Framework for API Automation using TestNG and Java, also added below Utilities in Java which are very useful for QA Automation 
 
 1) CSV Read and Write
 2) DB connection and Execute MySQL Query
