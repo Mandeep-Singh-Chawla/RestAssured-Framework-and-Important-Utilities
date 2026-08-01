@@ -75,7 +75,7 @@ public class DBconnectUtil {
     public static DBconnectUtil getInstance(PropertyFactory propertyFactory) throws SQLException {
         if(instance==null) {
             instance =  new DBconnectUtil(propertyFactory);
-        } else if(instance.getConnection().isClosed()) {
+        } else if(instance.getConnection() == null || instance.getConnection().isClosed()) {
             instance =  new DBconnectUtil(propertyFactory);
         }
 
@@ -122,11 +122,27 @@ public class DBconnectUtil {
      * @throws SQLException if a database access error occurs
      * @throws IOException if an I/O error occurs
      */
+    private static int parsePort(String portValue, int defaultPort) {
+        if (portValue == null || portValue.trim().isEmpty() || portValue.contains("${")) {
+            return defaultPort;
+        }
+        try {
+            return Integer.parseInt(portValue.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid DB_PORT '" + portValue + "', using default " + defaultPort);
+            return defaultPort;
+        }
+    }
+
+    private static boolean isBlankOrPlaceholder(String value) {
+        return value == null || value.trim().isEmpty() || value.contains("${");
+    }
+
     public Connection initConnection1(PropertyFactory propertyFactory) throws SQLException, IOException {
 
         sshHost = propertyFactory.getProperty("SSH_Host");
-        RPort = Integer.parseInt(propertyFactory.getProperty("DB_PORT"));
-        if (sshHost != null && !sshHost.isEmpty()) {
+        RPort = parsePort(propertyFactory.getProperty("DB_PORT"), 3306);
+        if (!isBlankOrPlaceholder(sshHost)) {
             sshUserName = propertyFactory.getProperty("SSH_UserName");
             sshPassword = propertyFactory.getProperty("SSH_Password");
             RHost = propertyFactory.getProperty("DB_IP");

@@ -28,16 +28,24 @@ public class BaseTest {
         BaseTest.emptyFolder(workingDirPath + "/errorScreenShot", false, ".png");
         BaseTest.emptyFolder(workingDirPath + "/data/GenericBulk/RunTimeUploadCSV", false, ".csv");
 
-        DBconnectUtil.getInstance(DBpropertyFactory);
+        String dbIp = DBpropertyFactory != null ? DBpropertyFactory.getProperty("DB_IP") : null;
+        if (dbIp != null && !dbIp.trim().isEmpty() && !dbIp.contains("${")) {
+            try {
+                DBconnectUtil.getInstance(DBpropertyFactory);
+            } catch (Exception e) {
+                System.out.println("DB connection setup skipped: " + e.getMessage());
+            }
+        } else {
+            System.out.println("DB connection setup skipped: DB_IP is not configured");
+        }
 
-
-        uiFlag = System.getProperty("uiOpen");
-        slackNotificationFlag = System.getProperty("sn");
+        uiFlag = System.getProperty("uiOpen", "false");
+        slackNotificationFlag = System.getProperty("sn", "false");
 
         System.out.println("UI Open flag : "+uiFlag);
         System.out.println("Slack Notification flag : "+slackNotificationFlag);
 
-        if(uiFlag.equalsIgnoreCase("true")){
+        if(uiFlag != null && uiFlag.equalsIgnoreCase("true")){
             String username			= DBpropertyFactory.getProperty("DB_USER_ID");
             String password			= DBpropertyFactory.getProperty("DB_PASSWORD");
 
@@ -67,16 +75,16 @@ public class BaseTest {
         ExtentReportUtil.closeReport();
         BaseTest.emptyFolder(workingDirPath + "/allure-results/", false, ".json");
         SlackIntegrationUtil st = new SlackIntegrationUtil();
-        if (uiFlag.equalsIgnoreCase("true")) {
-            if(slackNotificationFlag.equalsIgnoreCase("true")) {
-                st.sendTestExecutionReportToSlack("./Reports/ExtentReport.html","Extents Report","UI Extents");
-                st.sendTestExecutionReportToSlack("./target/surefire-reports/customized-emailable-report.html","TestNG Emailable Report","UI TestNG");
-            }
-        }else {
-            if(slackNotificationFlag.equalsIgnoreCase("true")) {
-                st.sendTestExecutionReportToSlack("./Reports/ExtentReport.html","Extents Report","API Extents");
-                st.sendTestExecutionReportToSlack("./target/surefire-reports/customized-emailable-report.html","TestNG Emailable Report","API TestNG");
-            }
+        boolean notifySlack = slackNotificationFlag != null && slackNotificationFlag.equalsIgnoreCase("true");
+        if (!notifySlack) {
+            return;
+        }
+        if (uiFlag != null && uiFlag.equalsIgnoreCase("true")) {
+            st.sendTestExecutionReportToSlack("./Reports/ExtentReport.html","Extents Report","UI Extents");
+            st.sendTestExecutionReportToSlack("./target/surefire-reports/customized-emailable-report.html","TestNG Emailable Report","UI TestNG");
+        } else {
+            st.sendTestExecutionReportToSlack("./Reports/ExtentReport.html","Extents Report","API Extents");
+            st.sendTestExecutionReportToSlack("./target/surefire-reports/customized-emailable-report.html","TestNG Emailable Report","API TestNG");
         }
 
 
@@ -93,7 +101,10 @@ public class BaseTest {
 //                ExtentReportUtil.logFailWOScrnsht(
 //                        method.getName() + " test execution failed " + result.getThrowable().toString());
 //        }
-        if (result.getStatus() == ITestResult.SKIP) {
+        if (result.getStatus() == ITestResult.FAILURE) {
+            ExtentReportUtil.logFailWOScrnsht(
+                    method.getName() + " test execution failed " + result.getThrowable());
+        } else if (result.getStatus() == ITestResult.SKIP) {
             ExtentReportUtil.logSkip(method.getName() + " test execution skipped " + result.getThrowable());
         } else {
             ExtentReportUtil.logPass(method.getName() + " test execution passed");
